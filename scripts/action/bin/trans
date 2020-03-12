@@ -1,0 +1,13 @@
+digraph {
+	node [shape=square style=filled]
+	class0 -> class2 [label=0.3493150684931507]
+	class0 -> class3 [label=0.48630136986301375]
+	class2 -> class5 [label=0.8076923076923077]
+	class2 -> end [label=0.3253968253968254]
+	class3 -> class5 [label=0.8026315789473684]
+	start -> class4 [label=0.8809523809523809]
+	class4 -> class0 [label=0.880952380952381]
+	class5 -> class5 [label=0.6875]
+	class5 -> end [label=0.6428571428571429]
+	start [color=pink shape=circle]
+}
