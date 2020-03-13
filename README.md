@@ -10,15 +10,14 @@ GP-HSMMは連続な情報を類似した系列ごとに分節分類を行うモ�
 * 1. [Overview](#Overview)
 * 2. [Table of Contents](#TableofContents)
 * 3. [Requirements](#Requirements)
-* 4. [Dependences](#Dependences)
-* 5. [Code Structure](#CodeStructure)
-* 6. [Datasets](#Datasets)
-* 7. [Training](#Training)
-* 8. [Results](#Training)
-* 9. [Generate Trajectory](#GenerateTrajectory)
-* 10. [Tips for your own dataset](#TipsforyourownDataset)
-* 11. [Citations](#Citations)
-* 12. [License](#Requirement)
+* 4. [Code Structure](#CodeStructure)
+* 5. [Datasets](#Datasets)
+* 6. [Training](#Training)
+* 7. [Results](#Training)
+* 8. [Generate Trajectory](#GenerateTrajectory)
+* 9. [Tips for your own dataset](#TipsforyourownDataset)
+* 10. [Citations](#Citations)
+* 11. [License](#Requirement)
 
 <!-- vscode-markdown-toc-config
 	numbering=true
@@ -36,10 +35,7 @@ GP-HSMMは連続な情報を類似した系列ごとに分節分類を行うモ�
 - scipy
 - graphviz
 - pandas
-##  4. <a name='Dependences'></a>Dependences
-- [continuous_data_record_ros](https://github.com/datemitumasa/gp_hsmm/files/4327793/model.pdf)
-
-## 5. <a name='Code Structure'></a>Code Structure  
+## 4. <a name='Code Structure'></a>Code Structure  
 - learn
     - learn/GaussianProcess.pyx : Cythonコーティングのガウス過程
     - learn/GaussianProcess.so : コンパイルされたCythonのガウス過程
@@ -52,14 +48,14 @@ GP-HSMMは連続な情報を類似した系列ごとに分節分類を行うモ�
         - data/continuous/data{0:d}.csv : 学習する連続情報(サンプル)
 - config
     - config/gp_hsmm_parameter.yaml : GP-HSMMで学習するための設定ファイル
-##  6. <a name='Datasets'></a>Datasets
+##  5. <a name='Datasets'></a>Datasets
 csv 形式の連続情報のデータを与え,設定ファイルから次元数を与えることで学習することが可能である.  
 参照点(RP)を用いて学習を行うためには,与える情報は7次元の姿勢情報である必要がある.  
 姿勢情報に情報を追加して学習する場合は,８次元目以降に設定することで学習が可能である.  
 姿勢情報以外を学習する場合は後述の[Training](#Training)で指定する設定が必要となる.
 ### 
 
-##  7. <a name='Training'></a>Training
+##  6. <a name='Training'></a>Training
 学習を行う場合は,まず連続情報に合わせた設定ファイルの作成が必要になる.
 - yaml/gp_hsmm_parameter.yaml :  
     - gp_hsmm_parametor :  
@@ -94,7 +90,7 @@ $ cd learn
 $ python RPOD.py
 ```  
 
-##  8. <a name='Results'></a>Results
+##  7. <a name='Results'></a>Results
 - learn
     - learn/save
         - learn/save/category
@@ -111,9 +107,9 @@ $ python RPOD.py
         - learn/save/category/test.svg : 学習された分類の時間ごとのガウス過程の平均と分散
         - learn/save/category/class.png : 学習された分類ごとの分節された軌道
 
-##  9. <a name='GenerateTrajectory'></a>Generate Trajectory
+##  8. <a name='GenerateTrajectory'></a>Generate Trajectory
 * [comming soon]
-##  10. <a name='Citations'></a>Citations
+##  9. <a name='Citations'></a>Citations
 * [comming soon]
-##  11. <a name='License'></a>License
+##  10. <a name='License'></a>License
 * [comming soon]
