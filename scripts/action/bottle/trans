@@ -1,9 +1,0 @@
-digraph {
-	node [shape=square style=filled]
-	class0 -> class2 [label=0.9534883720930232]
-	start -> class1 [label=0.9393939393939393]
-	class1 -> class1 [label=0.8028169014084506]
-	class2 -> class2 [label=0.9344262295081968]
-	class2 -> end [label=0.9393939393939393]
-	start [color=pink shape=circle]
-}

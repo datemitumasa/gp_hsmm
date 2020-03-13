@@ -58,9 +58,9 @@ csv 形式の連続情報のデータを与え,設定ファイルから次元数
 ##  6. <a name='Training'></a>Training
 学習を行う場合は,まず連続情報に合わせた設定ファイルの作成が必要になる.
 - yaml/gp_hsmm_parameter.yaml :  
-    - gp_hsmm_parameter :  
+    - gp_hsmm_parameter : RPで学習されるカテゴリ名,RPODでは'gp_hsmm_parameter'のカテゴリは学習から除外される  
         - data_dimention : 学習する情報の次元数  
-        - time_thred : 分節に適用する物体情報の時間の許容差分(sec)  
+        - time_thread : 分節に適用する物体情報の時間の許容差分(sec)  
         - distance_thread : 分節に適用する物体と軌道との距離の閾値(m),time_thread以内に閾値以内に物体が近づくことがなければ学習に適用されない  
         - max_distance_thread : 分節に適用する物体と手先との限界距離(m),これ以上離れた物体は学習に適用されない  
         - data_time_sparse : 学習データの時間幅(sec),設定した値より時間幅が小さい場合は自動で調節する  
@@ -74,6 +74,7 @@ csv 形式の連続情報のデータを与え,設定ファイルから次元数
             - no_rotate_class : 物体固有の座標系に従い,物体の軸から見た軌道に変換を行う参照点.物体情報を必要とする.
             - no_landmark_class : 参照点を使わず,７次元姿勢情報以外を学習する場合はこのClass以外を0とする.
         - object_csvdata: 参照点候補を格納したcsvのパス
+        - time_name: 物体,学習データにおける時間情報を表す名前
         - category : 学習に用いる物体の名前
         - continuous_csvdata : 学習に用いる連続情報のcsvデータ
         - continuous_data_name : 学習に用いる連続情報の名前

@@ -2,177 +2,105 @@
 # encoding: utf8
 #from __future__ import unicode_literals
 import numpy as np
-from RPODGPHSMMs import GPSegmentation
+from RPGPHSMMs import GPSegmentation
 from dataframe import Objects
 import pandas as pd
-import multiprocessing
 import sys
 sys.setrecursionlimit(10000)
-OBJ = {"test_object":["recognized_object/exp_object/7"]}
-
-_path =  __file__.split("/")[:-1]
-path  = "/".join(_path) + "/"
-f = open(path + "../config/parametor.yaml", "r+")
-param = yaml.load(f)["gp_hsmm_parametor"]
-f.close()
 
 
-CSVNAME=param["gp_hsmm_parametor"]["continuous_csvdata"]
-
-CSVCOLMN =param["gp_hsmm_parametor"]["continuous_data_name"]
-
-TIMENAME = "time"
-
-DATAFRAME = param["gp_hsmm_parametor"]["object_csvdata"]
-
-TIMETHRED  = param["gp_hsmm_parametor"]["time_thred"]
-
-DISTANCETHRED = param["gp_hsmm_parametor"]["distance_thread"]
-MAXDISTANCETHRED =  param["gp_hsmm_parametor"]["max_distance_thread"]
-TIMESPARSE = param["gp_hsmm_parametor"]["data_time_sparse"]
-SAVE = "save/handai_lab/{}/"
-
-def dataframe_downsampling(frame):
-    t = frame[TIMENAME]
+def dataframe_downsampling(frame, param):
+    t = frame[param["time_name"]]
     st = t[0]
     droplist = []
     for i in range(1, len(t)):
-        if t[i] - st < TIMESPARSE:
+        if t[i] - st < param["data_time_sparse"]:
             droplist.append(i)
         else:
             st = t[i]
     ff = frame.drop(droplist)
     return ff
 
-class Manager(object):
-    def __init__(self,):
-        self.series = {}
-        self.objects_data = {}
-        objects = Objects(DATAFRAME)
-        keys = OBJ.keys()
-        for k in keys:
-            self.objects_data[k] = list(objects.get_objects_data(OBJ[k]))
-        self.objects_df = {}
-        self.load_csv_data()
-        self.i = 0
-        
+class RPGPHSMM(object):
+    def __init__(self,category="gp_hsmm_parametor", param=None):
+        if param == None:
+            _path =  __file__.split("/")[:-1]
+            path  = "/".join(_path) + "/"
+            f = open(path + "../config/parametor.yaml", "r+")
+            param = yaml.load(f)[category]
+            f.close()
+
+        self.category            = category
+        self.save                = "save/{}"
+        self.parameter           = param
+        self.series = []
+        self.objects_df = pd.DataFrame()
+
+    def load_data(self, continuous_dataframe, object_dataframe):
+        self.series = continuous_csvdata
+        self.objects_df = object_dataframe
+
     def set_gp_data(self,):
-        keys     = OBJ.keys()
-        self.GPs = []
-        for k in keys:
-            ser  = self.series[k]
-            df   = self.objects_df[k]
-            gp   = GPSegmentation(ser, df, k)
-            self.GPs.append(gp)
-        
-    def multi_learn(self,):
-        for i in range(len(self.GPs)):
-            self.GPs[i]._set_state()
-        jobs     = []
-        for i in range(len(self.GPs)):
-            job  = multiprocessing.Process(target=self.GPs[i].learn_start(SAVE.format(self.i)), args=(i,))
-            jobs.append(job)
-            job.start()
-        [job.join() for job in jobs]
-        self.i += 1
-        
-        
-    def load_csv_data(self):
-        dfs = []
-        for name in CSVNAME:
-            _df =pd.read_csv(name)
-            df = dataframe_downsampling(_df)
-            dfs.append(df)
-        keys = OBJ.keys()
-        for k in keys:
-            poses, time, _name, _ids = self.objects_data[k]
-            of = pd.DataFrame()
-            of["time"] = time
-            of["pose"] = poses
-            of["id"] = _ids
-            of["name"] = _name
-            datalist = []
-            objectlist = []
-            for df in dfs:
-                t = df.time.values
-                odf = of.loc[(of.time <= t[-1]) & (of.time >= t[0])]
-                op = odf.pose.values
-                ot = odf.time.values
-                oi = odf.id.values
-                first_time = ot[0]
-                for i in range(len(op)):
-                    p = op[i]
-                    pdf = df.loc[(df.time >= ot[i]) & (df.time <= ot[i]+TIMETHRED)]
-                    x = pdf.x.values
-                    y = pdf.y.values
-                    z = pdf.z.values
-                    distances = np.power((x - p[0])**2 + (y - p[1])**2 + (z - p[2])**2, 0.5)
-                    dis = np.min(distances)                    
-                    if dis > DISTANCETHRED:
-                        continue
-                    else:
-                        objectlist.append(oi[i])
+        ser  = self.series
+        df   = self.objects_df
+        gp   = GPSegmentation(ser, df, self.category, self.parameter)
+        self.GP = gp
 
-            odf = of.loc[of.id.isin(objectlist)]
-            op = odf.pose.values
-            ot = odf.time.values
-            oi = odf.id.values
-            first_time = ot[0]
-            for df in dfs:
-                t = df.time.values
-                for i in range(len(ot)):
-                    p = op[i]
-                    if ot[i] < t[0]:
-                        continue
-                    if ot[i] > t[-1]:
-                        break
-                    if i != len(ot)-1:
-                        time_thred = ot[i+1] - ot[i]
-                        if time_thred > TIMETHRED:
-                            pdf = df.loc[(df.time >= first_time) & (df.time <= ot[i] + TIMETHRED)]
-                            x = pdf.x.values
-                            y = pdf.y.values
-                            z = pdf.z.values
-                            distances = np.power((x - p[0])**2 + (y - p[1])**2 + (z - p[2])**2, 0.5)
-                            n = range(len(distances))
-                            n.reverse()
-                            for j in n:
-                                if distances[j] <= MAXDISTANCETHRED:
-                                    break
-                            pdf = pdf[0:j+1]
-
-                            pdf = pdf.reset_index()
-                            del pdf["index"]
-                            
-                            first_time = ot[i+1]
-                            datalist.append(pdf)
-                    else:
-                        pdf = df.loc[(df.time >= first_time) & (df.time <= ot[i] + TIMETHRED)]
-                        x = pdf.x.values
-                        y = pdf.y.values
-                        z = pdf.z.values
-                        distances = np.power((x - p[0])**2 + (y - p[1])**2 + (z - p[2])**2, 0.5)
-                        n = range(len(distances))
-                        n.reverse()
-                        for j in n:
-                            if distances[j] <= MAXDISTANCETHRED:
-                                break
-                        pdf = pdf[0:j+1]
-
-                        
-                        pdf = pdf.reset_index()
-                        del pdf["index"]
-                        datalist.append(pdf)
-            odf = odf.reset_index()
-            self.objects_df[k] = odf
-            self.series[k] = datalist
-            
-                    
-
+    def learn(self,number):
+        self.GP._set_state()
+        self.GP.learn_start(self.save.format(number))
 
 if __name__ == '__main__':
-    test = Manager()
-    test.set_gp_data()
-    for i in range(20):
-        test.multi_learn()
-        
+    category = "gp_hsmm_parameter"
+    _path =  __file__.split("/")[:-1]
+    path  = "/".join(_path) + "/"
+    f = open(path + "../config/parametor.yaml", "r+")
+    param = yaml.load(f)[category]
+    f.close()
+    _csv_data = param["continuous_csvdata"]
+    continuous_dataframe = []
+    for csv in _csv_data:
+        csv_data = pd.read_csv(path + csv)
+        csv_data  = dataframe_downsampling(_csv_data, param)
+        continuous_dataframe.append(csv_data)
+    objects = Objects(path + param["object_csvdata"])
+
+    poses, time, _name, _ids = objects.get_objects_data(param["category"])
+    of = pd.DataFrame()
+    of["time"] = time
+    of["pose"] = poses
+    of["id"] = _ids
+    of["name"] = _name
+    datalist = []
+    objectlist = []
+    for df in continuous_dataframe:
+        t = df.time.values
+        odf = of.loc[(of.time <= t[-1]) & (of.time >= t[0])]
+        op = odf.pose.values
+        ot = odf.time.values
+        oi = odf.id.values
+        first_time = ot[0]
+        for i in range(len(op)):
+            p = op[i]
+            pdf = df.loc[(df.time >= ot[i]) & (df.time <= ot[i]+param["time_thred"])]
+            x = pdf.x.values
+            y = pdf.y.values
+            z = pdf.z.values
+            distances = np.power((x - p[0])**2 + (y - p[1])**2 + (z - p[2])**2, 0.5)
+            dis = np.min(distances)                    
+            if dis > param["distance_thread"]:
+                continue
+            else:
+                objectlist.append(oi[i])
+
+    object_dataframe = of.loc[of.id.isin(objectlist)]
+    object_dataframe["id"] = range(len(object_dataframe))
+    object_dataframe.reset_index()
+    del object_dataframe["index"]
+
+
+    for i in range(10):
+        rpgphsmm = RPGPHSMM(category, param)
+        rpgphsmm.load_data(continuous_dataframe, object_dataframe)
+        rpgphsmm.set_gp_data()
+        rpgphsmm.learn(i)

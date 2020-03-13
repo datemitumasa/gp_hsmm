@@ -84,15 +84,11 @@ class GPSegmentation(object):
     CORD_MOV = 4
     FIELD_CORD = 5
 
-    def __init__(self, series, objects_data, category, cordinate_class_num, parametor):
-        self.parametor = parametor
+    def __init__(self, series, objects_data, category, parameter):
+        self.parameter = parameter
         self.joint_states = []
         self.joint_state_stamp = []
         self.object_category = category
-        self.t_n = cordinate_class_num[0] 
-        self.h_n =  cordinate_class_num[1]
-        self.h1_n = cordinate_class_num[2]
-        self.h2_n = cordinate_class_num[3]
         self._set_state()
         print "set ",len(series), " data"
         for s in series:
@@ -106,12 +102,16 @@ class GPSegmentation(object):
         
 
     def _set_state(self,):
-        self.timethread = self.parametor["time_thread"]
-        self.AVE_LEN = self.parametor["average_length"]
-        self.MIN_LEN = self.parametor["min_length"]
-        self.MAX_LEN = self.parametor["max_length"]
-        self.dim = self.parametor["data_dimention"]
-        self.iteration = self.parametor["learn_iteration"]
+        self.timethread = self.parameter["time_thread"]
+        self.AVE_LEN = self.parameter["average_length"]
+        self.MIN_LEN = self.parameter["min_length"]
+        self.MAX_LEN = self.parameter["max_length"]
+        self.dim = self.parameter["data_dimention"]
+        self.iteration = self.parameter["learn_iteration"]
+        self.t_n = self.parameter["landmark_setting"][]
+        self.h_n =  cordinate_class_num[1]
+        self.h1_n = cordinate_class_num[2]
+        self.h2_n = cordinate_class_num[3]
 
         cor = [0]*self.t_n + [1] * self.h1_n + [2] * self.h_n + [3] * self.h2_n
         self.cordinates = cor
