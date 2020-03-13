@@ -1,9 +1,10 @@
 # gp_hsmm
 
 ##  1. <a name='Overview'></a>Overview
-連続情報の分節分類を行うrospkg  
-特に３次元空間における手先の変位を,類似した軌道ごとに分節分類する.
-![model](https://user-images.githubusercontent.com/28037675/76589088-417e8b00-652c-11ea-95ab-30af521afa6e.png)
+GP-HSMMは連続な情報を類似した系列ごとに分節分類を行うモデルである.  
+本モデルはGP-HSMMに物体情報を付加することで,物体操作時のエンドエフェクターの軌道の分節に特化したモデルである.  
+参照点という軌道の特徴を強調する座標系を設計することで,より解釈性の高い基本系列の獲得を可能としている.
+![Fruture](https://user-images.githubusercontent.com/28037675/76589881-e8642680-652e-11ea-8d23-433b39b0c36f.png)
 ##  2. <a name='TableofContents'></a>Table of Contents
 <!-- vscode-markdown-toc -->
 * 1. [Overview](#Overview)
@@ -112,10 +113,7 @@ $ python RPOD.py
 
 ##  9. <a name='GenerateTrajectory'></a>Generate Trajectory
 * [comming soon]
-##  10. <a name='TipsforyourownDataset'></a>Tips for your own dataset
-[continuous_data_record_ros](https://github.com/datemitumasa/continuous_data_record_ros)
-を用いることで,tfを用いて連続情報の保存と,学習用のcsvの作成が容易に可能である.  
-##  11. <a name='Citations'></a>Citations
+##  10. <a name='Citations'></a>Citations
 * [comming soon]
-##  12. <a name='License'></a>License
+##  11. <a name='License'></a>License
 * [comming soon]
