@@ -58,7 +58,7 @@ csv 形式の連続情報のデータを与え,設定ファイルから次元数
 ##  6. <a name='Training'></a>Training
 学習を行う場合は,まず連続情報に合わせた設定ファイルの作成が必要になる.
 - yaml/gp_hsmm_parameter.yaml :  
-    - gp_hsmm_parametor :  
+    - gp_hsmm_parameter :  
         - data_dimention : 学習する情報の次元数  
         - time_thred : 分節に適用する物体情報の時間の許容差分(sec)  
         - distance_thread : 分節に適用する物体と軌道との距離の閾値(m),time_thread以内に閾値以内に物体が近づくことがなければ学習に適用されない  
