@@ -36,7 +36,7 @@
 - graphviz
 - pandas
 ##  4. <a name='Dependences'></a>Dependences
-- [continuous_data_record_ros](https://github.com/datemitumasa/continuous_data_record_ros)
+- [continuous_data_record_ros](https://github.com/datemitumasa/gp_hsmm/files/4327793/model.pdf)
 
 ## 5. <a name='Code Structure'></a>Code Structure  
 - learn
