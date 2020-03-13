@@ -3,7 +3,7 @@
 ##  1. <a name='Overview'></a>Overview
 連続情報の分節分類を行うrospkg  
 特に３次元空間における手先の変位を,類似した軌道ごとに分節分類する.
-![Overview](https://github.com/datemitumasa/gp_hsmm/files/4327793/model.pdf)
+![model](https://user-images.githubusercontent.com/28037675/76589088-417e8b00-652c-11ea-95ab-30af521afa6e.png)
 ##  2. <a name='TableofContents'></a>Table of Contents
 <!-- vscode-markdown-toc -->
 * 1. [Overview](#Overview)
