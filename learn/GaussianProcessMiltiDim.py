@@ -2,32 +2,27 @@
 import pyximport
 import numpy
 pyximport.install(setup_args={'include_dirs':[numpy.get_include()]}, inplace=True)
-#import gp_iwata as GaussianProcess
-#import gp_iwata_sparse as GaussianProcess
+
 
 import  GaussianProcess
 
 class GPMD:
     def __init__(self, dim,beta):
         self.__dim = dim
-        self.__gp = [ GaussianProcess.GP(beta[d]) for d in range(self.__dim) ]
-#        self.__gp =GaussianProcess.GP()
+        self.__gp = [ GaussianProcess.GP() for d in range(self.__dim) ]
 
     def learn(self,x, y ):
         y = numpy.array(y)
-#        
-         
         for d in range(self.__dim):
             if self.__dim==1:
                 self.__gp[d].learn( x, y )
             else:
                 if len(y)!=0:
-                    
+
                     self.__gp[d].learn( x, y[:,d] )
 
                 else:
                     self.__gp[d].learn( x, [] )
-                    #self.__gp[d].learn( range(10), [ 0 for i in range(10) ] )
 
     def learn2(self,x, y ):
         y = numpy.array(y)
@@ -39,14 +34,11 @@ class GPMD:
                     self.__gp[d].learn( x, y[:,d] )
                 else:
                     self.__gp[d].learn( x, [] )
-                    
-                    
 
     def calc_lik(self, x, y , max_len):
         lik = 0.0
         y = numpy.array(y)
-#        lik += self.__gp.calc_lik( numpy.array(x,dtype=numpy.float) , y[:,:self.__dim], max_len)
-        
+
         for d in range(self.__dim):
             if self.__dim==1:
                 lik += self.__gp[d].calc_lik( numpy.array(x,dtype=numpy.float) , y, max_len)
@@ -89,27 +81,19 @@ class GPMD:
 
         return gendata_lo,gendata_mi,gendata_hi,gendata_si
 
-    def generatesigma(self, rng):        
+    def generatesigma(self, rng):
         gendata_sigma = numpy.zeros( (len(rng), self.__dim) )
         print("make")
         y_lo, y_mi, y_hi,y_si =self.__gp.generate2(rng)
         gendata_sigma = y_si
+        return gendata_sigma
 
-#        for d in range(self.__dim):
-#            y_lo, y_mi, y_hi,y_si =self.__gp.generate2(rng)
-#            for i,y in enumerate(y_lo):
-#                gendata_sigma[i,d]= y
-
-        return gendata_sigma        
-        
-        
 def main():
     gp = GPMD( 2 )
     gp.learn([],[])
 
     data = [[1.0,1.0],[1.0,1.0],[1.0,1.0]]
 
-    #gp.learn( range(3) , data )
     gp.plot( range(0,3) )
     pylab.show()
     print gp.calc_lik( range(3), data )

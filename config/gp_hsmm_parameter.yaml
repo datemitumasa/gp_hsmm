@@ -1,0 +1,30 @@
+gp_hsmm_parameter:
+	- learn_iteration: 10
+	- data_dimention: 7
+	- time_thred: 15
+	- distance_thread: 0.5
+	- max_distance_thread: 1.5
+	- data_time_sparse: 1.0
+	- average_length: 10
+	- min_length: 5
+	- max_length: 10
+	- landmark_setting:
+		- own_landmark_class: 0
+		- z_axis_rotate_class: 2
+		- z_and_y_axis_rotate_class: 2
+		- no_rotate_class: 2
+		- no_landmark_class: 0
+	- object_csvdata: csvdata/object_data.csv
+	- category: "object"
+	- continuous_csvdata:
+		- "csvdata/continuous/data1.csv"
+		- "csvdata/continuous/data2.csv"
+		- "csvdata/continuous/data3.csv"
+	- continuous_data_name: 
+		- "x"
+		- "y"
+		- "z"
+		- "qx"
+		- "qy"
+		- "qz"
+		- "qw"

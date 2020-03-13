@@ -10,34 +10,26 @@ import sys
 sys.setrecursionlimit(10000)
 OBJ = {"test_object":["recognized_object/exp_object/7"]}
 
-CSVNAME=[
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_0/exp_crest_10_0_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_1/exp_crest_10_1_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_2/exp_crest_10_2_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_3/exp_crest_10_3_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_4/exp_crest_10_4_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_5/exp_crest_10_5_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_6/exp_crest_10_6_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_7/exp_crest_10_7_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_8/exp_crest_10_8_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_9/exp_crest_10_9_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_10/exp_crest_10_10_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_11/exp_crest_10_11_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_12/exp_crest_10_12_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_13/exp_crest_10_13_hand_state.csv",
-        "/home/iwata/program/lab/gp_hsmm_ros/src/csv_data/handai/exp_crest_10_14/exp_crest_10_14_hand_state.csv",
-         ]
+_path =  __file__.split("/")[:-1]
+path  = "/".join(_path) + "/"
+f = open(path + "../config/parametor.yaml", "r+")
+param = yaml.load(f)["gp_hsmm_parametor"]
+f.close()
 
-CSVCOLMN = ["x", "y", "z", "hand", "qx", "qy", "qz", "qw",
-            "power_x", "power_y", "power_z"]
+
+CSVNAME=param["gp_hsmm_parametor"]["continuous_csvdata"]
+
+CSVCOLMN =param["gp_hsmm_parametor"]["continuous_data_name"]
 
 TIMENAME = "time"
 
-DATAFRAME = "./csv_data/marge_dataframe.csv"
-TIMETHRED  = 15
-DISTANCETHRED = 0.5
-MAXDISTANCETHRED = 1.5
-TIMESPARSE = 1.
+DATAFRAME = param["gp_hsmm_parametor"]["object_csvdata"]
+
+TIMETHRED  = param["gp_hsmm_parametor"]["time_thred"]
+
+DISTANCETHRED = param["gp_hsmm_parametor"]["distance_thread"]
+MAXDISTANCETHRED =  param["gp_hsmm_parametor"]["max_distance_thread"]
+TIMESPARSE = param["gp_hsmm_parametor"]["data_time_sparse"]
 SAVE = "save/handai_lab/{}/"
 
 def dataframe_downsampling(frame):

@@ -14,23 +14,12 @@ import pandas as pd
 import numpy as np
 from data_function import Datafunction
 
-USE_JOINT = ["x", "y", "z", "hand", "qx", "qy", "qz", "qw",
-                      "power_x", "power_y","power_z"]
-DIST = 0.1
-DIM  = 8
-ITE  = 10
-TIMETHRED = 15
+USE_JOINT = ["x", "y", "z", "qx", "qy", "qz", "qw"]
+DIST = 0.9
 ########################
-C_BETA=[[2.5,2.5,10.,10.,2.5,2.5,2.5,2.5],
-        [10.0,10.0,10.,10.,10.0,10.0,10.0,10.],
-        [10.0,10.0,10.,10.,10.0,10.0,10.0,10.],
-        [10.0,10.0,10.,10.,10.0,10.0,10.0,10.]]
 MAX = 700
 MINIX = -32700
 MIN = -700
-
-CATEGORY=["button","table","doll"]
-
 """
 Cythonのコンパイルできないときは，
 
@@ -86,9 +75,6 @@ def export_dataframe2series(frame):
     return series
 
 class GPSegmentation(object):
-    MAX_LEN = 11
-    MIN_LEN = 6
-    AVE_LEN = 9
     SKIP_LEN = 1
     MIN_STATE = 3
     CORD_TRA = 0
@@ -98,10 +84,15 @@ class GPSegmentation(object):
     CORD_MOV = 4
     FIELD_CORD = 5
 
-    def __init__(self, series, objects_data, category):
+    def __init__(self, series, objects_data, category, cordinate_class_num, parametor):
+        self.parametor = parametor
         self.joint_states = []
         self.joint_state_stamp = []
         self.object_category = category
+        self.t_n = cordinate_class_num[0] 
+        self.h_n =  cordinate_class_num[1]
+        self.h1_n = cordinate_class_num[2]
+        self.h2_n = cordinate_class_num[3]
         self._set_state()
         print "set ",len(series), " data"
         for s in series:
@@ -115,23 +106,19 @@ class GPSegmentation(object):
         
 
     def _set_state(self,):
-        self.AVE_LEN = 10
-        self.MIN_LEN = 5
-        self.MAX_LEN = 13
-        self.dim = DIM
+        self.timethread = self.parametor["time_thread"]
+        self.AVE_LEN = self.parametor["average_length"]
+        self.MIN_LEN = self.parametor["min_length"]
+        self.MAX_LEN = self.parametor["max_length"]
+        self.dim = self.parametor["data_dimention"]
+        self.iteration = self.parametor["learn_iteration"]
 
-        self.t_n =  0
-        self.h_n =  2
-        self.h1_n = 2
-        self.h2_n = 2
-        
         cor = [0]*self.t_n + [1] * self.h1_n + [2] * self.h_n + [3] * self.h2_n
         self.cordinates = cor
-        self.cord_beta = C_BETA
         self.numclass = len(cor)
         self.segmlen = 3
-        self.gps = [GaussianProcessMiltiDim.GPMD(self.dim,self.cord_beta[self.cordinates[i]]) for i in range(self.numclass)]
-        
+        self.gps = [GaussianProcessMiltiDim.GPMD(self.dim) for i in range(self.numclass)]
+
         self.segm_in_class = [[] for i in range(self.numclass)]
         self.segmclass = {}
         self.segmlandmark = {}
@@ -150,22 +137,6 @@ class GPSegmentation(object):
         self.svdir = ""
         self.segmlandmark_df= {}
         self.segment_data = []
-
-    def dist_land(self, segm, landpose):
-        near_list = []
-        _segm = segm.T
-        x = _segm[0]
-        y = _segm[1]
-        z = _segm[2]
-        for i in range(len(landpose)):
-            p = landpose[i]
-            distances = np.power((x-p[0])**2+(y-p[1])**2+(z-p[2])**2 , 0.5)
-            dis = np.min(distances)
-            if dis > DIST:
-                continue
-            near_list.append(i)
-        return near_list
-
     def load_data(self,):
         self.segments = []
         self.segments_time = []
@@ -203,31 +174,30 @@ class GPSegmentation(object):
             for i, s in enumerate(segm):
                 st = stamp_list[i]
 
-                frames = self.object_dataframe.loc[(self.object_dataframe.time >= st[0]-TIMETHRED) & (self.object_dataframe.time <= st[-1])]
+                frames = self.object_dataframe.loc[(self.object_dataframe.time >= st[0]-self.timethread) & (self.object_dataframe.time <= self.timethread)]
                 lands = frames.pose.values
                 ids = frames.id.values
-                if len(frames) == 0:
-                    print "warn warn warn" * 10
+                if len(frames) == 0 and self.t_n == 0:
+                    print "no object, learn stop"
                     dump()
                 while 1:
                     c = np.random.choice(range(self.numclass))
                     near_object = range(len(ids))
                     cor = self.cordinates[c]
-                    if cor == self.CORD_LAND2:
-                        near_object=self.dist_land(s, lands)
-                        if len(near_object)==0:
-                            continue
                     if cor == self.CORD_TRA:
-                        self.segmlandmark[id(s)] = [0,0,0,0,0,0,-1]
+                        self.segmlandmark[id(s)] = np.zeros(self.dim)
                         break
                     else:
+                        if len(near_object) == 0:
+                            print "not mathch object data"
+                            dump()
                         number = np.random.choice(near_object)
                         self.segmlandmark[id(s)] = lands[number]
                         Id = ids[number]
                         self.segmlandmark_df[id(s)] = frames.loc[(frames.id == Id)]
                         break
                 self.segmclass[id(s)] = c
-                
+
     def set_DataFunction(self,):
         i = 0
         self.segment_data = []
@@ -243,7 +213,7 @@ class GPSegmentation(object):
                 d = Datafunction()
                 d.set_time(st[0],st[-1])
                 d.set_series(s)
-                d.set_class(cls)                
+                d.set_class(cls)
                 try:
                     df = self.segmlandmark_df[num]
                     d.set_ref_object(df.pose.values[0], df.name.values[0], df.time.values[0], df.id.values[0])
@@ -282,7 +252,7 @@ class GPSegmentation(object):
         key = False
         qua1 = -quat1[0:3]
         quv1 = quat1[3]
-        qua2 = quat2[0:3]        
+        qua2 = quat2[0:3]
         quv2 = quat2[3]
         if not key:
             qua = quv1 * qua2 + quv2 * qua1 + np.cross(qua1, qua2)
@@ -315,10 +285,10 @@ class GPSegmentation(object):
         print("now load model data")
         for c in range(self.numclass):
             filename = os.path.join(basename, "class%03d.npy" % c)
-            self.segm_in_class[c] = [s for s in np.load(filename)]
+            self.segm_in_class[c] = [s for s in np.load(filename, allow_pickle=True)]
 
             landmarks = np.load(os.path.join(basename,
-                                                "landmarks%03d.npy" % c))
+                                                "landmarks%03d.npy" % c), allow_pickle=True)
 
             for s, l in zip(self.segm_in_class[c], landmarks):
                 self.segmlandmark[id(s)] = l
@@ -326,11 +296,11 @@ class GPSegmentation(object):
             self.update_gp(c)
 
         # 遷移確率更新
-        self.trans_prob = np.load(os.path.join(basename, "trans.npy"))
+        self.trans_prob = np.load(os.path.join(basename, "trans.npy"), allow_pickle=True)
         self.trans_prob_bos = np.load(os.path.join(basename,
-                                                      "trans_bos.npy"))
+                                                      "trans_bos.npy"), allow_pickle=True)
         self.trans_prob_eos = np.load(os.path.join(basename,
-                                                      "trans_eos.npy"))
+                                                      "trans_eos.npy"), allow_pickle=True)
     def generate_class(self, basename):
 
         for i in range(self.numclass):
@@ -343,13 +313,24 @@ class GPSegmentation(object):
             np.savetxt(basename + "GP_m{0:d}.csv".format(i), gendata_mi,delimiter=",")
             np.savetxt(basename + "GP_sigma{0:d}.csv".format(i), gendata_sigma,delimiter=",")
 
+        for i in range(self.numclass):
+            gendata_lo,gendata_mi,gendata_hi, gendata_sigma=self.gps[i].generate2(np.arange(0, self.MAX_LEN, 0.1))
+            gendata_hi = np.array(gendata_hi)
+            gendata_lo = np.array(gendata_lo)
+
+            gendata_mi = np.array(gendata_mi)
+            gendata_sigma = np.array(gendata_sigma)
+            np.savetxt(basename + "GP_high_m{0:d}.csv".format(i), gendata_mi,delimiter=",")
+            np.savetxt(basename + "GP_high_sigma{0:d}.csv".format(i), gendata_sigma,delimiter=",")
+
+
     def gp_curve_old(self, basename):
         # GP読み込み
         gendata_lo_l = []
         gendata_mi_l = []
         gendata_hi_l = []
         for c in range(self.numclass):
-            gendata_lo,gendata_mi,gendata_hi,_si=self.gps[c].generate2(np.arange(0, self.MAX_LEN,0.1))
+            gendata_lo,gendata_mi,gendata_hi,_si=self.gps[c].generate2(np.arange(0, self.MAX_LEN,0.01))
             gendata_lo_l.append(gendata_lo)
             gendata_mi_l.append(gendata_mi)
             gendata_hi_l.append(gendata_hi)
@@ -380,39 +361,25 @@ class GPSegmentation(object):
                                              self.cordinates[c])
             except:
                 print self.segmlandmark.keys()
-                print s
-                dump()
 
             datay += [y for y in s]
             datax += range(len(s))
         # 間引く,ひとところに固まることのないように
         self.gps[c].learn(np.array(datax), datay)
 
-    def update_gp2(self, c):
-        datay = []
-        datax = []
-        for s in self.segm_in_class[c]:
-            s = self.cordinate_transform(s, self.segmlandmark[id(s)],
-                                         self.cordinates[c])
-            datay += [y for y in s]
-            datax += range(len(s))
-        # 間引く,ひとところに固まることのないように
-        self.gps[c].learn2(np.array(datax), datay)        
-        
-        
     def sample_class(self, landmark, segm):
         prob = []
 
         for c, gp in enumerate(self.gps):
             slen = len(segm)
             plen = 1.0
-            if len(segm) > 2:
+            if len(segm) > self.min_len:
                 plen = (self.AVE_LEN**slen * math.exp(-slen) /
                         math.factorial(self.AVE_LEN))
 
                 cord = self.cordinates[c]
                 s = self.cordinate_transform(segm, landmark, cord)
-                p = gp.calc_lik(range(len(s)), s, self.MAX_LEN)
+                p = gp.calc_lik(range(len(s)), s)
                 prob.append((math.exp(p) * plen))
             else:
                 prob.append(0)
@@ -426,7 +393,7 @@ class GPSegmentation(object):
             if rnd <= accm_prob[i]:
                 return i, prob[i]
 
-        print "aaaaaaaaaaaaaaaaaa"
+        print "wrog prob, please check parametor"
 
     def calc_output_prob(self, c, segm, landmark):
         gp = self.gps[c]
@@ -434,13 +401,13 @@ class GPSegmentation(object):
         slen = len(segm)
 
         plen = 1.0
-        if len(segm) > 2:
+        if len(segm) >= self.MIN_LEN:
             plen = (self.AVE_LEN**slen * math.exp(-self.AVE_LEN) /
                     math.factorial(slen))
 
             cord = self.cordinates[c]
             s = self.cordinate_transform( segm, landmark, cord)
-            p = gp.calc_lik(range(len(s)), s, self.MAX_LEN)
+            p = gp.calc_lik(range(len(s)), s)
             return p + np.log(plen)
         else:
             return 0
@@ -467,7 +434,6 @@ class GPSegmentation(object):
             np.savetxt(basename+"segm%03d.txt" % n, classes, fmt="%d")
             np.savetxt(basename+"slen%03d.txt" % n, np.array(clen,dtype=np.int))
             np.savetxt(basename+"stamps%03d.txt" % n, np.array(stamp))
-              
             
         np.savetxt(basename+"cord.txt", np.array(self.cordinates), fmt="%d")
         plt.figure()
@@ -524,12 +490,11 @@ class GPSegmentation(object):
         if cord == self.CORD_TRA:
             ss = np.array(s).T
             ss_xyz = ss[:3]
-            ss_h = ss[3]
-            ss_qxyzw = ss[4:8]
-            ss_power = ss[8:]
-            ss_h = ss_h.T
+            ss_qxyzw = ss[3:7]
+            if self.dim > 7:
+                ss_other = ss[7:]
+                ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
-            ss_power = ss_power.T
             offset = np.zeros(len(ss_xyz))
             for i in range(len(ss_xyz)):
                 offset[i] = ss_xyz[i][0]
@@ -539,8 +504,6 @@ class GPSegmentation(object):
             R = tf.transformations.quaternion_matrix(q)
 
             v = []
-
-
             r_xyzw = ss_qxyzw[0]
             r_xyzw_inv = np.array([-r_xyzw[0],-r_xyzw[1],-r_xyzw[2],r_xyzw[3]])
             rot_inv = tf.transformations.euler_from_quaternion(r_xyzw_inv)
@@ -566,38 +529,23 @@ class GPSegmentation(object):
                 ls.append(qt)
             ls = np.array(ls)
             ss_h = np.array(ss_h)
-            ss_power = ss_power/10.0
-            try:
-                ss = np.c_[s_xyz, ss_h]
-                if self.dim > 4:
-                    ss = np.c_[ss, ls]
-                if self.dim > 8:
-                    ss = np.c_[ss, ss_power]
-            except:
-                print s_xyz.shape
-                print ss_h.shape
-                print ls.shape
-                print raw_input()
-
+            ss_o = s_xyz
+            if self.dim > 3:
+                ss = np.c_[ss_o, ls]
+            if self.dim > 7:
+                ss = np.c_[ss, ss_other]
         elif cord == self.CORD_LAND1:
             ss = np.array(s).T
             ss_xyz = ss[:3]
-            ss_h = ss[3]
-            ss_qxyzw = ss[4:8]
-            ss_power = ss[8:]
-            ss_h = ss_h.T
+            ss_qxyzw = ss[3:7]
+            if self.dim > 7:
+                ss_other = ss[7:]
+                ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
             s_xyz = ss_xyz.T
-            ss_power = ss_power.T
 
             v = []
-
-
-
             s_xyz = s_xyz - land_pos[0:3]
-
-
-
             t = -math.atan2(s_xyz[0][1], s_xyz[0][0])
             R = np.array([[np.cos(t), -np.sin(t)],
                              [np.sin(t), np.cos(t)]])
@@ -618,7 +566,6 @@ class GPSegmentation(object):
                 else:
                     rxyzw = tf.transformations.quaternion_from_euler(0.0,-1.57,zaw)
             else:
-#                rxyzw = tf.transformations.quaternion_from_euler(land_pos[3],land_pos[4],land_pos[5])
                 rxyzw = np.array([land_pos[3],land_pos[4],land_pos[5],land_pos[6]])
 
             q = np.array(rxyzw)
@@ -627,24 +574,22 @@ class GPSegmentation(object):
                 qt = self.quat2quat(q, qq)
                 ls.append(qt)
             ls = np.array(ls)
-            ss_power = ss_power/10.0
-            ss_h = np.array(ss_h)
-            ss = np.c_[s_xyz, ss_h]           
-            if self.dim > 4:
-                ss = np.c_[ss, ls]
-            if self.dim > 8:
-                ss = np.c_[ss, ss_power]
-                
+            ss_o = s_xyz
+            if self.dim > 3:
+                ss = np.c_[ss_o, ls]
+
+            if self.dim > 7:
+                ss = np.c_[ss, ss_other]
+
         elif cord == self.CORD_LAND2:
             ss = np.array(s).T
             ss_xyz = ss[:3]
-            ss_h = ss[3]
-            ss_qxyzw = ss[4:8]
-            ss_power = ss[8:]
-            ss_h = ss_h.T
+            ss_qxyzw = ss[3:7]
+            if self.dim > 7:
+                ss_other = ss[7:]
+                ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
             s_xyz = ss_xyz.T
-            ss_power = ss_power.T
 
             v = []
             s_xyz = s_xyz - land_pos[0:3]
@@ -680,9 +625,8 @@ class GPSegmentation(object):
                 if land_pos[2] > 0.25:
                     rxyzw = tf.transformations.quaternion_from_euler(0.0,0.0,zaw)
                 else:
-                    rxyzw = tf.transformations.quaternion_from_euler(0.0,-1.57,zaw)                    
+                    rxyzw = tf.transformations.quaternion_from_euler(0.0,-1.57,zaw)
             else:
-#                rxyzw = tf.transformations.quaternion_from_euler(land_pos[3],land_pos[4],land_pos[5])
                 rxyzw = [land_pos[3],land_pos[4],land_pos[5],land_pos[6]]
 
             q = np.array(rxyzw)
@@ -690,31 +634,24 @@ class GPSegmentation(object):
             for qq in ss_qxyzw:
                 qt = self.quat2quat(q, qq)
                 ls.append(qt)
-            ss_power = ss_power/10.0
             ls = np.array(ls)
-            ss_h = np.array(ss_h)
-            ss = np.c_[s_xyz, ss_h]           
-            if self.dim > 4:
-                ss = np.c_[ss, ls]
-            if self.dim > 8:
-                ss = np.c_[ss, ss_power]
+            ss_o = s_xyz
+            if self.dim > 3:
+                ss = np.c_[ss_o, ls]
+
+            if self.dim > 7:
+                ss = np.c_[ss, ss_other]
 
         elif cord == self.CORD_LAND3:
             ss = np.array(s).T
             ss_xyz = ss[:3]
             ss_h = ss[3]
-            ss_qxyzw = ss[4:8]
-            ss_power = ss[8:]
-            ss_h = ss_h.T
+            ss_qxyzw = ss[3:7]
+            if self.dim > 7:
+                ss_other = ss[7:]
+                ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
             s_xyz = ss_xyz.T
-            ss_power = ss_power.T
-#            r_xyz = land_pos[3:6]
-
-
-
-            
-#            r_xyzw = tf.transformations.quaternion_from_euler(r_xyz[0],r_xyz[1],r_xyz[2])
             r_xyzw = np.array([land_pos[3],land_pos[4],land_pos[5],land_pos[6]])
             r_xyzw_inv = np.array([-r_xyzw[0],-r_xyzw[1],-r_xyzw[2],r_xyzw[3]])
             rot_inv = tf.transformations.euler_from_quaternion(r_xyzw_inv)
@@ -739,16 +676,16 @@ class GPSegmentation(object):
                 qt = self.quat2quat(r_xyzw, qq)
                 ls.append(qt)
             ls = np.array(ls)
-            ss_h = np.array(ss_h)
-            ss = np.c_[s_xyz, ss_h]           
-            if self.dim > 4:
-                ss = np.c_[ss, ls]
-            if self.dim > 8:
-                ss = np.c_[ss, ss_power]
+            ss_o = s_xyz
+            if self.dim > 3:
+                ss = np.c_[ss_o, ls]
+
+            if self.dim > 7:
+                ss = np.c_[ss, ss_other]
         elif cord == self.CORD_MOV:
              ss = np.array(s)
         return ss
-        
+
     def forward_filtering(self,  d, _joint_stamps, landdf):
         joint_stamps = np.array(_joint_stamps)
         T = len(d)
@@ -756,31 +693,31 @@ class GPSegmentation(object):
         a[a==1.0] = None
         ll = np.ones((T, self.MAX_LEN, self.numclass),dtype='int')
         ll = ll * -2
-        poses  = landdf.pose.values
-        stamps = landdf.time.values
-        ids    = landdf.id.values
+        if len(landdf) !=0:
+            poses  = landdf.pose.values
+            stamps = landdf.time.values
+            ids    = landdf.id.values
+        else:
+            poses  = pd.Series()
+            stamps = pd.Series()
+            ids    = pd.Series()
 
         for t in range(T):
-#            p_bar.update(p_bar.currval + 1)        
             for k in range(self.MIN_LEN, self.MAX_LEN, self.SKIP_LEN):
                 if t-k < 0:
                     break
                 j_stamps = joint_stamps[t-k:t+1]
-                
-                lands    = poses[np.where((stamps >= j_stamps[0]-TIMETHRED) & (stamps <= j_stamps[-1]) )]
-                land_ids = ids[np.where((stamps >= j_stamps[0]-TIMETHRED) & (stamps <= j_stamps[-1]) )]
+                lands    = poses[np.where((stamps >= j_stamps[0]-self.timethread) & (stamps <= j_stamps[-1]) )]
+                land_ids = ids[np.where((stamps >= j_stamps[0]-self.timethread) & (stamps <= j_stamps[-1]) )]
                 segm = d[t-k:t+1]
-                if len(lands) == 0:
+                if len(lands) == 0 and self.t_n == 0:
                     print "No object"
                 for c in range(self.numclass):
                     out_prob = None
                     lm = None
                     cord = self.cordinates[c]
                     if cord in [ self.CORD_LAND1 , self.CORD_LAND2 , self.CORD_LAND3]:
-                        if cord == self.CORD_LAND2:
-                            near_lands = self.dist_land(segm, lands)
-                        else:
-                            near_lands = range(len(lands))
+                        near_lands = range(len(lands))
                         calc_probs = []
                         for iii in near_lands:
                             calc_prob = self.calc_output_prob(c, segm, lands[iii])
@@ -789,9 +726,14 @@ class GPSegmentation(object):
                             max_prob = np.argmax(calc_probs)
                             out_prob = np.max(calc_probs)
                             lm = land_ids[near_lands[max_prob]]
-                            ll[t,k,c] = lm
+                            try:
+                                ll[t,k,c] = lm
+                            except:
+                                ll[t,k,c] = lm
+
+
                         else:
-#                            "no obj"
+                            # print "no obj"
                             lm = -2
                             ll[t,k,c] = lm
                             out_prob = MINIX
@@ -838,16 +780,6 @@ class GPSegmentation(object):
                         # 最後の単語
                         a[t, k, c] += np.log(self.trans_prob_eos[c])
 
-                    
-
-        """
-            for k in range(self.MAX_LEN):
-                if t-k<0:
-                    break
-                print "%.2f" % a[t,k],
-            print
-        raw_input()
-        """
         return a, ll
 
     def sample_idx(self, prob_lik):
@@ -890,7 +822,6 @@ class GPSegmentation(object):
             if rnd <= accm_prob[i]:
                 return i
 
-        print "aaaaaaaaaaaaaaaaaa"
 
     def backward_sampling(self, a, d, stamps, ll):
         T = a.shape[0]
@@ -902,7 +833,12 @@ class GPSegmentation(object):
         stamp_list = []
         
         while True:
-            idx = self.sample_idx( a[t].reshape(self.MAX_LEN * self.numclass))
+            try:
+                idx = self.sample_idx( a[t].reshape(self.MAX_LEN * self.numclass))
+            except:
+                print a[t]
+                print a
+                dump()
             l = ll[t].reshape(self.MAX_LEN * self.numclass)[idx]
             test = np.zeros(self.numclass)
             for kk in range(self.MAX_LEN):
@@ -995,6 +931,7 @@ class GPSegmentation(object):
                     c = self.segmclass[id(s)]
                     self.segm_in_class[c].append(s)
             # 各クラス毎に学習
+            print "updateGP"
             for c in range(self.numclass):
                 self.update_gp(c)
 
@@ -1028,6 +965,7 @@ class GPSegmentation(object):
                     # パラメータ更新
                     # 対象の分節を全体から削除
                     self.remove_ndarray(self.segm_in_class[c], s)
+            _st = time.time()
             if learning_phase:
                 # GP更新
                 for c in range(self.numclass):
@@ -1038,24 +976,21 @@ class GPSegmentation(object):
                 self.calc_trans_prob()
                 self.calc_start_prob()
                 self.calc_end_prob()
+            print "update prametor time :", time.time()- _st
 
 
 #            print "forward...",
-            landdf = self.object_dataframe.loc[(self.object_dataframe.time >= stamps[0]) & (self.object_dataframe.time <= stamps[-1])]
+            landdf = self.object_dataframe.loc[(self.object_dataframe.time >= np.min(stamps)-self.timethread) & (self.object_dataframe.time <= np.max(stamps))]
             _st = time.time()
             a, ll = self.forward_filtering(d, stamps , landdf)
             print "forward time :", time.time() - _st
 #            print "backward...",
             pt = "{0:d}".format(self.number)
-            
-            make_dir(self.svdir+pt)
-            np.save(self.svdir+pt+"/"+"aplha{0:d}.npy".format(i),a)
-            np.save(self.svdir+pt+"/"+"lands{0:d}.npy".format(i),ll)
+
             segm, segm_class, landdf_list, stamp_list = self.backward_sampling(a, d, stamps, ll)
             self.segments[i] = segm
             self.segments_time[i] = stamp_list
             ccc = []
-            _st = time.time()
             for s, c, ll , ss in zip(segm, segm_class, landdf_list, stamp_list):
 
                 self.segmclass[id(s)] = c
@@ -1065,7 +1000,7 @@ class GPSegmentation(object):
                     _df["pose"] = segm[0]
                     _df["id"] = id(segm[0])
                     _df["name"] = "my_hand"
-                    _df["time"] = ss[0]                    
+                    _df["time"] = ss[0]
                 else:
                     _df = self.object_dataframe.loc[(self.object_dataframe.id == ll)]
                 pose = _df.pose.values[0]
@@ -1075,7 +1010,6 @@ class GPSegmentation(object):
                 # パラメータ更新
                 if learning_phase:
                     self.segm_in_class[c].append(s)
-            print "update prametor time :", time.time()- _st
             if learning_phase:
                 # GP更新
                 for c in range(self.numclass):
@@ -1086,8 +1020,7 @@ class GPSegmentation(object):
                 self.calc_start_prob()
                 self.calc_end_prob()
                 end_time = time.time()
-                print "1 term time:",end_time - start_time
-#                print cls
+                print self.object_category, " 1 term time:",end_time - start_time
         self.set_DataFunction()
         return True
 
@@ -1096,10 +1029,11 @@ class GPSegmentation(object):
         for segm in self.segments:
             for s in segm:
                 c = self.segmclass[id(s)]
-                lik += self.gps[c].calc_lik(range(len(s)), s, self.MAX_LEN)
+                lik += self.gps[c].calc_lik(range(len(s)), s)
         return lik
 
     def learn_start(self, svdir):
+        print svdir
         print("load data")
         st = time.time()
         self.load_data()
@@ -1112,7 +1046,7 @@ class GPSegmentation(object):
         
         liks = []
         self.number = 0
-        for it in range(ITE):
+        for it in range(self.iteration):
             self.number = it
             print "-----", it, "-----"
             flag = self.learn()
@@ -1138,6 +1072,49 @@ class GPSegmentation(object):
         print"learn finish ",self.object_category, " time : ", time.time()-st
      
         return None
+
+    def recog_start(self, svdir):
+        print svdir
+        print("load data")
+        st = time.time()
+        self.load_data()
+        
+        print("learn start ",self.object_category)
+        self.base_dir = svdir
+        make_dir(self.base_dir)
+        self.svdir = self.base_dir + "{}/".format(self.object_category)
+        make_dir(self.svdir)
+        
+        liks = []
+        self.number = 0
+        for it in range(1):
+            self.number = it
+            print "-----", it, "-----"
+            flag = self.recog()
+            try:
+                lik = self.calc_lik()
+            except:
+                lik = 0.0
+            self.gp_curve_old(self.svdir)
+            np.savetxt(self.svdir+"liks.txt",liks)
+            self.save_model( self.svdir)
+            if len(liks) > 3:
+                if lik == liks[-1]:
+                    break
+            liks.append(lik)
+#            if not flag:
+#                print("out")
+#                return False
+        print liks
+        print("now saving")
+        self.save_model( self.svdir)
+        print self.calc_lik()
+        self.generate_class(self.svdir)
+        print"recog finish ",self.object_category, " time : ", time.time()-st
+     
+        return None
+
+
 
 def make_dir(name):
     try:

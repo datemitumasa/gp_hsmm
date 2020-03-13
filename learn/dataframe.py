@@ -4,7 +4,7 @@
 import numpy as np
 import pandas as pd
 import tf
-DEFAULT = "./dataframe/marge_dataframes.csv"
+DEFAULT = "csvdata/object_data.csv"
 
 class Objects(object):
     def __init__(self,name=None):
@@ -29,7 +29,7 @@ class Objects(object):
         else:
             return [], [], [], []
         
-        time = db.ros_timestamp.values / 10.**9
+        time = db.ros_timestamp.values 
         ids = db.id.values
         x = db.position_x.values
         y = db.position_y.values
