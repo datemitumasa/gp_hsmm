@@ -35,6 +35,7 @@ GP-HSMMは連続な情報を類似した系列ごとに分節分類を行うモ�
 - scipy
 - graphviz
 - pandas
+- multiprocessing
 ## 4. <a name='Code Structure'></a>Code Structure  
 - learn
     - learn/GaussianProcess.pyx : Cythonコーティングのガウス過程
@@ -57,7 +58,7 @@ csv 形式の連続情報のデータを与え,設定ファイルから次元数
 
 ##  6. <a name='Training'></a>Training
 学習を行う場合は,まず連続情報に合わせた設定ファイルの作成が必要になる.
-- yaml/gp_hsmm_parameter.yaml :  
+- config/gp_hsmm_parameter.yaml :  
     - gp_hsmm_parameter : RPで学習されるカテゴリ名,RPODでは'gp_hsmm_parameter'のカテゴリは学習から除外される  
         - data_dimention : 学習する情報の次元数  
         - time_thread : 分節に適用する物体情報の時間の許容差分(sec)  
@@ -81,35 +82,48 @@ csv 形式の連続情報のデータを与え,設定ファイルから次元数
   
 ```bash
 # RP-GP-HSMMの学習  
-$ cd learn
-$ python RP.py
+$ rosrun gp_hsmm RP.py
 ```  
 
 ```bash
 # RP-GP-HSMMの学習  
-$ cd learn
-$ python RPOD.py
+$ rosrun gp_hsmm RPOD.py
 ```  
 
 ##  7. <a name='Results'></a>Results
 - learn
     - learn/save
-        - learn/save/category
-        - learn/save/category/GP_m{0:d}.csv : 学習されたガウス過程の平均
-        - learn/save/category/GP_sigma{0:d}.csv : 学習されたガウス過程の分散
-        - learn/save/category/class{0:3d}.npy : クラスごとに分類された分節データ
-        - learn/save/category/segm{0:03d}.txt : 学習データの時間ごとの分類結果
-        - learn/save/category/slen{0:03d}.txt : 学習データの分節ごとの分類結果
-        - learn/save/category/stamps{0:03d}.txt : 学習データの分節ごとの時刻
-        - learn/save/category/trans.npy : 学習された分類ごとの遷移確率
-        - learn/save/category/trans_bos.npy : 学習された分類に対する初期状態からの遷移確率
-        - learn/save/category/trans_eos.npy : 学習された分類ごとの終了状態への遷移確率
-        - learn/save/category/trans.png : 学習された分類ごとの図示された遷移確率
-        - learn/save/category/test.svg : 学習された分類の時間ごとのガウス過程の平均と分散
-        - learn/save/category/class.png : 学習された分類ごとの分節された軌道
+        - learn/save/{number}/category
+        - learn/save/{number}/category/GP_m{0:d}.csv : 学習されたガウス過程の平均
+        - learn/save/{number}/category/GP_sigma{0:d}.csv : 学習されたガウス過程の分散
+        - learn/save/{number}/category/class{0:3d}.npy : クラスごとに分類された分節データ
+        - learn/save/{number}/category/segm{0:03d}.txt : 学習データの時間ごとの分類結果
+        - learn/save/{number}/category/slen{0:03d}.txt : 学習データの分節ごとの分類結果
+        - learn/save/{number}/category/stamps{0:03d}.txt : 学習データの分節ごとの時刻
+        - learn/save/{number}/category/trans.npy : 学習された分類ごとの遷移確率
+        - learn/save/{number}/category/trans_bos.npy : 学習された分類に対する初期状態からの遷移確率
+        - learn/save/{number}/category/trans_eos.npy : 学習された分類ごとの終了状態への遷移確率
+        - learn/save/{number}/category/trans.png : 学習された分類ごとの図示された遷移確率
+        - learn/save/{number}/category/test.svg : 学習された分類の時間ごとのガウス過程の平均と分散
+        - learn/save/{number}/category/class.png : 学習された分類ごとの分節された軌道
 
 ##  8. <a name='GenerateTrajectory'></a>Generate Trajectory
-* [comming soon]
+* ここでは３次元空間に置いて物体を基準としたエンドエフェクターの軌道を生成する方法を記述する
+* learn/save/ 以下に保存された category をscripts/action/ 以下にコピーする
+* config/trajectory_generator.yaml の end_effector_tf にロボットのエンドエフェクタを表すTFの名称を記入する
+```bash
+# 軌道生成プログラムの準備  
+$ rosrun gp_hsmm trajectory_generator.py
+```  
+```bash
+*軌道生成用ROSサービス: 
+- /gp_hsmm/trajectory/make_trajectory : gp_hsmm/TrajectoryOrder
+ - Request :
+  - std_msgs/String object_name : scripts/action/ 以下に存在するフォルダ名
+  - geometry_msgs/Pose object_pose : 対象となる物体の座標
+  - std_msgs/Int64[] action_classes : 実行する基本系列のクラス,順番は学習された遷移確率に従い自動的に決まる
+ - Response : 
+  - gp_hsmm/Motion action : 生成された軌道のTransformStamped型のlist
 ##  9. <a name='Citations'></a>Citations
 * [comming soon]
 ##  10. <a name='License'></a>License
