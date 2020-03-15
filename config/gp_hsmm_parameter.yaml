@@ -1,0 +1,96 @@
+gp_hsmm_parameter:
+ learn_iteration: 10
+ data_dimention: 7
+ time_thread: 15
+ distance_thread: 0.5
+ max_distance_thread: 1.5
+ data_time_sparse: 1.0
+ average_length: 10
+ min_length: 5
+ max_length: 10
+ landmark_setting:
+  own_landmark_class: 1
+  z_axis_rotate_class: 1
+  z_and_y_axis_rotate_class: 0
+  no_rotate_class: 1
+  no_landmark_class: 0
+ object_csvdata: data/marge_objectdata.csv
+ time_name : "time"
+ category: 
+  - "object_1"
+ continuous_csvdata:
+  - "data/continuous/data1/continuous_topic.csv"
+  - "data/continuous/data2/continuous_topic.csv"
+  - "data/continuous/data3/continuous_topic.csv"
+ continuous_data_name: 
+  - "x"
+  - "y"
+  - "z"
+  - "qx"
+  - "qy"
+  - "qz"
+  - "qw"
+bowl:
+ learn_iteration: 10
+ data_dimention: 7
+ time_thread: 15
+ distance_thread: 0.5
+ max_distance_thread: 1.5
+ data_time_sparse: 1.0
+ average_length: 7
+ min_length: 4
+ max_length: 13
+ landmark_setting:
+  own_landmark_class: 0
+  z_axis_rotate_class: 1
+  z_and_y_axis_rotate_class: 2
+  no_rotate_class: 0
+  no_landmark_class: 0
+ object_csvdata: data/marge_objectdata.csv
+ time_name : "time"
+ category: 
+  - "object_1"
+ continuous_csvdata:
+  - "data/continuous/data1/continuous_topic.csv"
+  - "data/continuous/data2/continuous_topic.csv"
+  - "data/continuous/data3/continuous_topic.csv"
+ continuous_data_name: 
+  - "x"
+  - "y"
+  - "z"
+  - "qx"
+  - "qy"
+  - "qz"
+  - "qw"
+bottle:
+ learn_iteration: 10
+ data_dimention: 7
+ time_thread: 15
+ distance_thread: 0.5
+ max_distance_thread: 1.5
+ data_time_sparse: 1.0
+ average_length: 7
+ min_length: 4
+ max_length: 13
+ landmark_setting:
+  own_landmark_class: 0
+  z_axis_rotate_class: 1
+  z_and_y_axis_rotate_class: 2
+  no_rotate_class: 0
+  no_landmark_class: 0
+ object_csvdata: data/marge_objectdata.csv
+ time_name : "time"
+ category: 
+  - "object_2"
+ continuous_csvdata:
+  - "data/continuous/data4/continuous_topic.csv"
+  - "data/continuous/data5/continuous_topic.csv"
+  - "data/continuous/data6/continuous_topic.csv"
+ continuous_data_name: 
+  - "x"
+  - "y"
+  - "z"
+  - "qx"
+  - "qy"
+  - "qz"
+  - "qw"
