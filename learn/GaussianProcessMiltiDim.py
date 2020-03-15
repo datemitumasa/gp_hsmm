@@ -7,7 +7,7 @@ pyximport.install(setup_args={'include_dirs':[numpy.get_include()]}, inplace=Tru
 import  GaussianProcess
 
 class GPMD:
-    def __init__(self, dim,beta):
+    def __init__(self, dim):
         self.__dim = dim
         self.__gp = [ GaussianProcess.GP() for d in range(self.__dim) ]
 

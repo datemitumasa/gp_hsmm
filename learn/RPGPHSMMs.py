@@ -108,12 +108,13 @@ class GPSegmentation(object):
         self.MAX_LEN = self.parameter["max_length"]
         self.dim = self.parameter["data_dimention"]
         self.iteration = self.parameter["learn_iteration"]
-        self.t_n = self.parameter["landmark_setting"][]
-        self.h_n =  cordinate_class_num[1]
-        self.h1_n = cordinate_class_num[2]
-        self.h2_n = cordinate_class_num[3]
+        self.t_n = self.parameter["landmark_setting"]["own_landmark_class"]
+        self.h_n =  self.parameter["landmark_setting"]["z_and_y_axis_rotate_class"]
+        self.h1_n = self.parameter["landmark_setting"]["z_axis_rotate_class"]
+        self.h2_n = self.parameter["landmark_setting"]["no_rotate_class"]
+        self.raw_n = self.parameter["landmark_setting"]["no_landmark_class"]
 
-        cor = [0]*self.t_n + [1] * self.h1_n + [2] * self.h_n + [3] * self.h2_n
+        cor = [0]*self.t_n + [1] * self.h1_n + [2] * self.h_n + [3] * self.h2_n + [4] *  self.raw_n 
         self.cordinates = cor
         self.numclass = len(cor)
         self.segmlen = 3
@@ -174,7 +175,7 @@ class GPSegmentation(object):
             for i, s in enumerate(segm):
                 st = stamp_list[i]
 
-                frames = self.object_dataframe.loc[(self.object_dataframe.time >= st[0]-self.timethread) & (self.object_dataframe.time <= self.timethread)]
+                frames = self.object_dataframe.loc[(self.object_dataframe.time >= st[0]-self.timethread) & (self.object_dataframe.time <= st[-1])]
                 lands = frames.pose.values
                 ids = frames.id.values
                 if len(frames) == 0 and self.t_n == 0:
@@ -407,7 +408,7 @@ class GPSegmentation(object):
 
             cord = self.cordinates[c]
             s = self.cordinate_transform( segm, landmark, cord)
-            p = gp.calc_lik(range(len(s)), s)
+            p = gp.calc_lik(range(len(s)), s, self.MAX_LEN)
             return p + np.log(plen)
         else:
             return 0
@@ -528,7 +529,6 @@ class GPSegmentation(object):
                 qt = self.quat2quat(q, qq)
                 ls.append(qt)
             ls = np.array(ls)
-            ss_h = np.array(ss_h)
             ss_o = s_xyz
             if self.dim > 3:
                 ss = np.c_[ss_o, ls]
@@ -739,7 +739,7 @@ class GPSegmentation(object):
                             out_prob = MINIX
                     else:
                         out_prob = self.calc_output_prob( c, segm, [segm[0][0],segm[0][1],segm[0][2],
-                                                                    segm[0][4],segm[0][5],segm[0][6],segm[0][7]])
+                                                                    segm[0][3],segm[0][4],segm[0][5],segm[0][6]])
 
                         ll[t,k,c] = -1
 
@@ -955,12 +955,15 @@ class GPSegmentation(object):
 #           そのファイルのランドマーク位置抽出
             for s in segm:
                 c = self.segmclass[id(s)]
-#               対象の分節のクラスを抽出
-#               対象の分節の分類を全体から削除
-                self.segmclass.pop(id(s))
-#               対象の分節のランドマークを全体から削除
-                self.segmlandmark.pop(id(s))
-                self.segmlandmark_df.pop(id(s))
+                try:
+    #               対象の分節のクラスを抽出
+    #               対象の分節の分類を全体から削除
+                    self.segmclass.pop(id(s))
+    #               対象の分節のランドマークを全体から削除
+                    self.segmlandmark.pop(id(s))
+                    self.segmlandmark_df.pop(id(s))
+                except:
+                    pass
                 if learning_phase:
                     # パラメータ更新
                     # 対象の分節を全体から削除
@@ -997,8 +1000,9 @@ class GPSegmentation(object):
                 ccc.append(c)
                 if ll == -1:
                     _df = pd.DataFrame()
-                    _df["pose"] = segm[0]
-                    _df["id"] = id(segm[0])
+                    print s[0]
+                    _df["pose"] = s[0]
+                    _df["id"] = id(s[0])
                     _df["name"] = "my_hand"
                     _df["time"] = ss[0]
                 else:
@@ -1029,7 +1033,7 @@ class GPSegmentation(object):
         for segm in self.segments:
             for s in segm:
                 c = self.segmclass[id(s)]
-                lik += self.gps[c].calc_lik(range(len(s)), s)
+                lik += self.gps[c].calc_lik(range(len(s)), s, self.MAX_LEN)
         return lik
 
     def learn_start(self, svdir):
@@ -1048,7 +1052,7 @@ class GPSegmentation(object):
         self.number = 0
         for it in range(self.iteration):
             self.number = it
-            print "-----", it, "-----"
+            print "-----", it, " ", self.category,"-----"
             flag = self.learn()
             try:
                 lik = self.calc_lik()

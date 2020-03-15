@@ -1,16 +1,24 @@
 #!/usr/bin/env python
-# encoding: utf8
-#from __future__ import unicode_literals
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Dec 25 13:56:00 2016
+
+@author: robocup
+"""
+ 
 import numpy as np
+import yaml
 from RPGPHSMMs import GPSegmentation
 from dataframe import Objects
 import pandas as pd
 import sys
+import rospy
 sys.setrecursionlimit(10000)
 
 
 def dataframe_downsampling(frame, param):
-    t = frame[param["time_name"]]
+    time_name = param["time_name"]
+    t = frame[time_name]
     st = t[0]
     droplist = []
     for i in range(1, len(t)):
@@ -23,21 +31,21 @@ def dataframe_downsampling(frame, param):
 
 class RPGPHSMM(object):
     def __init__(self,category="gp_hsmm_parametor", param=None):
+        _path =  __file__.split("/")[:-1]
+        path  = "/".join(_path) + "/"
         if param == None:
-            _path =  __file__.split("/")[:-1]
-            path  = "/".join(_path) + "/"
             f = open(path + "../config/parametor.yaml", "r+")
             param = yaml.load(f)[category]
             f.close()
 
         self.category            = category
-        self.save                = "save/{}"
+        self.save                = path+"save/{}/"
         self.parameter           = param
         self.series = []
         self.objects_df = pd.DataFrame()
 
     def load_data(self, continuous_dataframe, object_dataframe):
-        self.series = continuous_csvdata
+        self.series = continuous_dataframe
         self.objects_df = object_dataframe
 
     def set_gp_data(self,):
@@ -51,17 +59,18 @@ class RPGPHSMM(object):
         self.GP.learn_start(self.save.format(number))
 
 if __name__ == '__main__':
+    rospy.init_node("rp_gp_hsmm_learn")
     category = "gp_hsmm_parameter"
     _path =  __file__.split("/")[:-1]
     path  = "/".join(_path) + "/"
-    f = open(path + "../config/parametor.yaml", "r+")
+    f = open(path + "../config/gp_hsmm_parameter.yaml", "r+")
     param = yaml.load(f)[category]
     f.close()
     _csv_data = param["continuous_csvdata"]
     continuous_dataframe = []
     for csv in _csv_data:
         csv_data = pd.read_csv(path + csv)
-        csv_data  = dataframe_downsampling(_csv_data, param)
+        csv_data  = dataframe_downsampling(csv_data, param)
         continuous_dataframe.append(csv_data)
     objects = Objects(path + param["object_csvdata"])
 
@@ -82,7 +91,7 @@ if __name__ == '__main__':
         first_time = ot[0]
         for i in range(len(op)):
             p = op[i]
-            pdf = df.loc[(df.time >= ot[i]) & (df.time <= ot[i]+param["time_thred"])]
+            pdf = df.loc[(df.time >= ot[i]) & (df.time <= ot[i]+param["time_thread"])]
             x = pdf.x.values
             y = pdf.y.values
             z = pdf.z.values
@@ -94,9 +103,8 @@ if __name__ == '__main__':
                 objectlist.append(oi[i])
 
     object_dataframe = of.loc[of.id.isin(objectlist)]
-    object_dataframe["id"] = range(len(object_dataframe))
+    # object_dataframe["id"] = range(len(object_dataframe))
     object_dataframe.reset_index()
-    del object_dataframe["index"]
 
 
     for i in range(10):

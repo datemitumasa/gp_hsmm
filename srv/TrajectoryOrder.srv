@@ -1,0 +1,7 @@
+string object_name
+geometry_msgs/Pose object_pose
+int64[] action_classes
+---
+gp_hsmm/Motion[] action
+bool success
+

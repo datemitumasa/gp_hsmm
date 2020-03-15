@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 import rospy
 import rosparam
-import planning_program2 as planning_program
 from geometry_msgs.msg import Transform
-from gp_hsmm_ros.srv import TrajectoryOrder, TrajectoryOrderResponse, TrajectoryOrderRequest 
-from gp_hsmm_ros.msg import Motion
+from gp_hsmm.srv import TrajectoryOrder, TrajectoryOrderResponse, TrajectoryOrderRequest 
+from gp_hsmm.msg import Motion
 import planner
 import tf2_ros
 from std_srvs.srv import Empty, EmptyRequest, EmptyResponse
 from sensor_msgs.msg import JointState
-from tf_utils import Tf
 import tf
 import math
 import numpy as np
@@ -57,13 +55,10 @@ def quat2quat(quat1, quat2):
 
 class ObjectGetter(object):
     def __init__(self):
-        rospy.Subscriber("/hsrb/joint_states", JointState, self._get_joint, queue_size=10)
-        rospy.Service("/gp_hsmm/trajectory/set_param",Empty, self.set_param)
-        rospy.Service("/gp_hsmm/trajectory/make_trajectory",TrajectoryOrder, self.make_trajectory)
         self.set_param(None)
         self.planner = planner.Planner(self._learned_folda,
                                        self._learned_category)
-        self.hand = 1.2
+        rospy.Service("/gp_hsmm/trajectory/make_trajectory",TrajectoryOrder, self.make_trajectory)
         self.buf = tf2_ros.Buffer()
         self._lis = tf2_ros.TransformListener(self.buf)
         print "#########"
@@ -76,13 +71,6 @@ class ObjectGetter(object):
         self._learned_category = rosparam.get_param(OBJECT_PARAM).split("/")
         self._hand_frame = rosparam.get_param(HAND_PARAM)
 
-    def _get_joint(self, data):
-        data = JointState()
-        try:
-            i = data.name.index("hand_motor_joint")
-            self.hand = data.position[i]
-        except:
-            rospy.logdebug("joint_states info is wrong")
 
     def set_stamp(self, xyz, qxyzw,name="target_object"):
         ts = Transform()
@@ -111,50 +99,32 @@ class ObjectGetter(object):
 
     def make_trajectory(self, data):
         _obj_pose = data.object_pose
-        pln_type = data.plan_type
         obj_pose = [_obj_pose.position.x,_obj_pose.position.y,_obj_pose.position.z,
                     _obj_pose.orientation.x, _obj_pose.orientation.y, _obj_pose.orientation.z, _obj_pose.orientation.w]
         act_list = data.action_classes
         object_category = data.object_name
         s = rospy.Time.now()
         trajectory_list = []
-        handpoints = []
-        impedance_list = []
-        _now_hand = self.hand
-        
-        if _now_hand > 1.0:
-            now_hand = 1.0
-        else:
-            now_hand = 0.0
-        
+
         _hand = self.buf.lookup_transform("map",self._hand_frame ,rospy.Time.now(),rospy.Duration(3.0))
         h = _hand.transform
         end_effect = [h.translation.x, h.translation.y, h.translation.z,
                       h.rotation.x, h.rotation.y, h.rotation.z,h.rotation.w]
         actor = self.planner.set_motion(act_list,object_category)
         _back = None
-        req = TrajectoryOrderResponse()        
+        req = TrajectoryOrderResponse()
         for i in range(len(actor)):
-            c = self.planner.make_trajector(actor[i], end_effect, now_hand, obj_pose, object_category, _back)
+            trajectory = self.planner.make_trajector(actor[i], end_effect, obj_pose, object_category, _back)
             motion = Motion()
-            impedance_list.append(c[2])
-            for k in range(len(c[0])):
-                xyzqxyzw = c[0][k]
-                hand= c[1][k]
+            for k in range(len(trajectory)):
+                xyzqxyzw = trajectory[k]
                 ts = self.set_transform(xyzqxyzw)
                 motion.trajectory.append(ts)
-                motion.hand.append(hand)
-            motion.impedance = c[2]
-#            motion.impedance = "NNN"
-                
-            trajectory_list.append(c[0])
-            end_effect = [c[0][-1][0][0],c[0][-1][0][1],c[0][-1][0][2],c[0][-1][1][0],c[0][-1][1][1],c[0][-1][1][2],c[0][-1][1][3]]
-            now_hand = c[1][-1]
+
+
+            trajectory_list.append(trajectory)
+            end_effect = [trajectory[-1][0][0], trajectory[-1][0][1], trajectory[-1][0][2], trajectory[-1][1][0], trajectory[-1][1][1], trajectory[-1][1][2], trajectory[-1][1][3]]
             _back = actor[i]
-            if now_hand > 0.8:
-                now_hand = 1.0
-            else:
-                now_hand = 0.0
             req.action.append(motion)
         ##########
                         
@@ -163,30 +133,27 @@ class ObjectGetter(object):
 #                                                          obj_pose,
 #                                                          object_category,
 #                                                          ref_frame_id="map")
-        print trajectory_list
-        print "#########"
-        print handpoints
-        print "#########"
-        print impedance_list
-        print "#########"
-                                                          
         rospy.loginfo(rospy.Time.now().to_sec()-s.to_sec())
-        
+        req.success = True
         return req
-
+    def run(self,):
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            self.planner.broadcast()
+            rate.sleep()
 
 
 if __name__=="__main__":
     rospy.init_node("test")
-#    try:
-#        rosparam.get_param(FOLDA_PARAM)    
-#    except:
-    rosparam.set_param(FOLDA_PARAM, "./action")
-    _cat = glob.glob("./action/*")
-    cat = [s.split("/")[-1] for s in _cat]
+    _path =  __file__.split("/")[:-1]
+    path  = "/".join(_path) + "/"
+    rospy.set_param(FOLDA_PARAM, path + "action")
+    _cat = glob.glob(path + "action/*/")
+    cat = [s.split("/")[-2] for s in _cat]
     cat_str = "/".join(cat)
-    rosparam.set_param(OBJECT_PARAM,cat_str)
-    rosparam.set_param(HAND_PARAM, "hand_palm_link")
+    rospy.set_param(OBJECT_PARAM,cat_str)
+    rospy.set_param(HAND_PARAM, "hand_link")
     
     obj = ObjectGetter()
+    obj.run()
     rospy.spin()
