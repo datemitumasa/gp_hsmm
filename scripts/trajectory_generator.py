@@ -11,6 +11,7 @@ from std_srvs.srv import Empty, EmptyRequest, EmptyResponse
 from sensor_msgs.msg import JointState
 import tf
 import math
+import yaml
 import numpy as np
 import glob
 
@@ -126,13 +127,6 @@ class ObjectGetter(object):
             end_effect = [trajectory[-1][0][0], trajectory[-1][0][1], trajectory[-1][0][2], trajectory[-1][1][0], trajectory[-1][1][1], trajectory[-1][1][2], trajectory[-1][1][3]]
             _back = actor[i]
             req.action.append(motion)
-        ##########
-                        
-#        const_traj,_fl, p = self.body.move_cartesian_path(waypoints, handpoints,
-#                                                          impedance_list, actor,
-#                                                          obj_pose,
-#                                                          object_category,
-#                                                          ref_frame_id="map")
         rospy.loginfo(rospy.Time.now().to_sec()-s.to_sec())
         req.success = True
         return req
@@ -147,12 +141,16 @@ if __name__=="__main__":
     rospy.init_node("test")
     _path =  __file__.split("/")[:-1]
     path  = "/".join(_path) + "/"
+    f = open(path + "../config/trajectory_generator.yaml", "r+")
+    param = yaml.load(f)[category]
+    f.close()
+
     rospy.set_param(FOLDA_PARAM, path + "action")
     _cat = glob.glob(path + "action/*/")
     cat = [s.split("/")[-2] for s in _cat]
     cat_str = "/".join(cat)
     rospy.set_param(OBJECT_PARAM,cat_str)
-    rospy.set_param(HAND_PARAM, "hand_link")
+    rospy.set_param(HAND_PARAM, param["end_effector_tf"])
     
     obj = ObjectGetter()
     obj.run()
