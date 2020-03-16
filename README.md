@@ -115,7 +115,6 @@ $ rosrun gp_hsmm RPOD.py
 # 軌道生成プログラムの準備  
 $ rosrun gp_hsmm trajectory_generator.py
 ```  
-```bash
 *軌道生成用ROSサービス: 
 - /gp_hsmm/trajectory/make_trajectory : gp_hsmm/TrajectoryOrder
  - Request :
