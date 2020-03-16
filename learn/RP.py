@@ -107,7 +107,7 @@ if __name__ == '__main__':
     object_dataframe.reset_index()
 
 
-    for i in range(10):
+    for i in range(1):
         rpgphsmm = RPGPHSMM(category, param)
         rpgphsmm.load_data(continuous_dataframe, object_dataframe)
         rpgphsmm.set_gp_data()
