@@ -1052,7 +1052,7 @@ class GPSegmentation(object):
         self.number = 0
         for it in range(self.iteration):
             self.number = it
-            print "-----", it, " ", self.category,"-----"
+            print "-----", it, " ", self.object_category,"-----"
             flag = self.learn()
             try:
                 lik = self.calc_lik()
