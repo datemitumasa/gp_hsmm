@@ -142,7 +142,7 @@ if __name__=="__main__":
     _path =  __file__.split("/")[:-1]
     path  = "/".join(_path) + "/"
     f = open(path + "../config/trajectory_generator.yaml", "r+")
-    param = yaml.load(f)[category]
+    param = yaml.load(f)
     f.close()
 
     rospy.set_param(FOLDA_PARAM, path + "action")

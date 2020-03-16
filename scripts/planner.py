@@ -320,6 +320,7 @@ class Planner(object):
         xyz = object_pose[:3]
         qxyzw = object_pose[3:]
         h_xyz = end_effector_pose[:3]
+        h_qxyzw = end_effector_pose[3:]
         x = xyz[0] - h_xyz[0]
         y = xyz[1] - h_xyz[1]
         z = xyz[2] - h_xyz[2]
@@ -337,13 +338,17 @@ class Planner(object):
         landmark_rol[1]=dic
         dic = {}
         exyz = tf.transformations.euler_from_quaternion(qxyzw)
+        hxyz = tf.transformations.euler_from_quaternion(h_qxyzw)
         xaw = exyz[0]
         yaw = exyz[1]
         zaw = exyz[2]
         dic["e"] = [xaw,yaw,zaw]
         dic["q"] = qxyzw
         landmark_rol[3]=dic
-        landmark_rol[0]=dic
+        h_dic = {}
+        h_dic["e"] = [hxyz[0], hxyz[1], hxyz[2]]
+        h_dic["q"] = [h_qxyzw]
+        landmark_rol[0]=h_dic
 #---
 
         first_state={}
@@ -366,7 +371,7 @@ class Planner(object):
         y = c3_pos[1]
         z = c3_pos[2]
         first_state[3] = [x,y,z]
-        first_state[0] = [x,y,z]
+        first_state[0] = [0., 0., 0.]
         return first_state, landmark_rol
 
     def calc_next_prob(self, end_effector_pose, object_pose, object_category,object_pose_inv,back_action):
