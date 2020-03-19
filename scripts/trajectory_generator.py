@@ -3,7 +3,10 @@
 import rospy
 import rosparam
 from geometry_msgs.msg import Transform
-from gp_hsmm.srv import TrajectoryOrder, TrajectoryOrderResponse, TrajectoryOrderRequest 
+from geometry_msgs.msg import TransformStamped
+from gp_hsmm.srv import TrajectoryOrder
+from gp_hsmm.srv import TrajectoryOrderResponse
+from gp_hsmm.srv import TrajectoryOrderRequest
 from gp_hsmm.msg import Motion
 import planner
 import tf2_ros
@@ -72,18 +75,6 @@ class ObjectGetter(object):
         self._learned_category = rosparam.get_param(OBJECT_PARAM).split("/")
         self._hand_frame = rosparam.get_param(HAND_PARAM)
 
-
-    def set_stamp(self, xyz, qxyzw,name="target_object"):
-        ts = Transform()
-        ts.translation.x = xyz[0]
-        ts.translation.y = xyz[1]
-        ts.translation.z = xyz[2]
-        ts.rotation.x = qxyzw[0]
-        ts.rotation.y = qxyzw[1]
-        ts.rotation.z = qxyzw[2]
-        ts.rotation.w = qxyzw[3]
-        return ts
-
     def set_transform(self, xyz_qxyzw,name="target_object"):
         ts = Transform()
         xyz = xyz_qxyzw[0]
@@ -91,12 +82,19 @@ class ObjectGetter(object):
         ts.translation.x =  xyz[0]
         ts.translation.y =  xyz[1]
         ts.translation.z =  xyz[2]
-        ts.rotation.x =     qxyzw[0]
-        ts.rotation.y =     qxyzw[1]
-        ts.rotation.z =     qxyzw[2]
-        ts.rotation.w =     qxyzw[3]
+        ts.rotation.x    =  qxyzw[0]
+        ts.rotation.y    =  qxyzw[1]
+        ts.rotation.z    =  qxyzw[2]
+        ts.rotation.w    =  qxyzw[3]
         return ts
-        
+
+    def set_tf(self, transform, tf_name):
+        ts                 = TransformStamped()
+        ts.transform       = transform
+        ts.header.stamp    = rospy.Time.now()
+        ts.header.frame_id = "map"
+        ts.child_frame_id  = tf_name
+        return ts
 
     def make_trajectory(self, data):
         _obj_pose = data.object_pose
@@ -113,6 +111,7 @@ class ObjectGetter(object):
                       h.rotation.x, h.rotation.y, h.rotation.z,h.rotation.w]
         actor = self.planner.set_motion(act_list,object_category)
         _back = None
+        self.planner.reset_stamp()
         req = TrajectoryOrderResponse()
         for i in range(len(actor)):
             trajectory = self.planner.make_trajector(actor[i], end_effect, obj_pose, object_category, _back)
@@ -121,6 +120,8 @@ class ObjectGetter(object):
                 xyzqxyzw = trajectory[k]
                 ts = self.set_transform(xyzqxyzw)
                 motion.trajectory.append(ts)
+                stamp = self.set_tf(ts, "hand_{}_{}".format(i, k))
+                self.planner.st.append(stamp)
 
 
             trajectory_list.append(trajectory)
