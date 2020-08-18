@@ -59,13 +59,20 @@ class RPOD(object):
         of["name"] = _name
         datalist = []
         objectlist = []
-        for df in continuous_dataframe:
+        for jj in range(len(continuous_dataframe)):
+        # for df in continuous_dataframe:
+            df = continuous_dataframe[jj]
             t = df.time.values
             odf = of.loc[(of.time <= t[-1]) & (of.time >= t[0])]
+            print len(odf)
             op = odf.pose.values
             ot = odf.time.values
             oi = odf.id.values
-            first_time = ot[0]
+            try:
+                first_time = ot[0]
+                print "load {}".format(_csv_data[jj].encode("utf-8"))
+            except:
+                continue
             for i in range(len(op)):
                 p = op[i]
                 pdf = df.loc[(df.time >= ot[i]) & (df.time <= ot[i]+self.param[category]["time_thread"])]
@@ -85,14 +92,19 @@ class RPOD(object):
         oi = odf.id.values
         first_time = ot[0]
         count = 0
-        for df in continuous_dataframe:
+        for jj in range(len(continuous_dataframe)):
+        # for df in continuous_dataframe:
+            df = continuous_dataframe[jj]
             count += 1
             t = df.time.values
             _odf = odf.loc[((odf.time >= np.min(t))&(odf.time <= np.max(t)))]
             op = _odf.pose.values
             ot = _odf.time.values
             oi = _odf.id.values
-            first_time = ot[0]
+            try:
+                first_time = ot[0]
+            except:
+                continue
 
 
             for i in range(len(ot)):
@@ -162,5 +174,6 @@ class RPOD(object):
 
 if __name__ == '__main__':
     rpod = RPOD()
-    for i in range(1):
+    for i in range(10):
         rpod.multi_learn(i)
+        print("{} learn finish".format(i +1))

@@ -67,12 +67,13 @@ def calctransform(p,B,sP_B):
     rP_O = rB_O + sP_O
     return rP_O
 
-def export_dataframe2series(frame):
+def export_dataframe2series(frame, names=USE_JOINT):
     _series = []
-    for name in USE_JOINT:
+    for name in names:
         _series.append(frame[name].values)
     series = np.array(_series).T
     return series
+
 
 class GPSegmentation(object):
     SKIP_LEN = 1
@@ -93,7 +94,7 @@ class GPSegmentation(object):
         print "set ",len(series), " data"
         for s in series:
             t = s.time.values
-            self.joint_states.append(export_dataframe2series(s))
+            self.joint_states.append(export_dataframe2series(s, self.parameter["continuous_data_name"]))
             self.joint_state_stamp.append(t)
         self.object_dataframe  = objects_data
         self.object_poses = self.object_dataframe.pose.values
@@ -313,6 +314,13 @@ class GPSegmentation(object):
             gendata_sigma = np.array(gendata_sigma)
             np.savetxt(basename + "GP_m{0:d}.csv".format(i), gendata_mi,delimiter=",")
             np.savetxt(basename + "GP_sigma{0:d}.csv".format(i), gendata_sigma,delimiter=",")
+            names = self.parameter["continuous_data_name"]
+            gp = pd.DataFrame(data=gendata_mi, columns=names)
+            gp.to_csv(basename+ "gp_cls{}.csv".format(i))
+
+            sig = pd.DataFrame(data=gendata_sigma, columns=names)
+            sig.to_csv(basename+ "sig_cls{}.csv".format(i))
+
 
         for i in range(self.numclass):
             gendata_lo,gendata_mi,gendata_hi, gendata_sigma=self.gps[i].generate2(np.arange(0, self.MAX_LEN, 0.1))
@@ -493,7 +501,11 @@ class GPSegmentation(object):
             ss_xyz = ss[:3]
             ss_qxyzw = ss[3:7]
             if self.dim > 7:
-                ss_other = ss[7:]
+                ss_hand = ss[7]
+            if self.dim > 8:
+                ss_state = np.ones(len(ss[8])) * land_pos[7]
+            if self.dim > 9:
+                ss_other = ss[9:]
                 ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
             offset = np.zeros(len(ss_xyz))
@@ -533,13 +545,22 @@ class GPSegmentation(object):
             if self.dim > 3:
                 ss = np.c_[ss_o, ls]
             if self.dim > 7:
+                ss = np.c_[ss, ss_hand]
+            if self.dim > 8:
+                ss = np.c_[ss, ss_state]
+            if self.dim > 9:
                 ss = np.c_[ss, ss_other]
+
         elif cord == self.CORD_LAND1:
             ss = np.array(s).T
             ss_xyz = ss[:3]
             ss_qxyzw = ss[3:7]
             if self.dim > 7:
-                ss_other = ss[7:]
+                ss_hand = ss[7]
+            if self.dim > 8:
+                ss_state = np.ones(len(ss[8])) * land_pos[7]
+            if self.dim > 9:
+                ss_other = ss[9:]
                 ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
             s_xyz = ss_xyz.T
@@ -579,6 +600,10 @@ class GPSegmentation(object):
                 ss = np.c_[ss_o, ls]
 
             if self.dim > 7:
+                ss = np.c_[ss, ss_hand]
+            if self.dim > 8:
+                ss = np.c_[ss, ss_state]
+            if self.dim > 9:
                 ss = np.c_[ss, ss_other]
 
         elif cord == self.CORD_LAND2:
@@ -586,7 +611,11 @@ class GPSegmentation(object):
             ss_xyz = ss[:3]
             ss_qxyzw = ss[3:7]
             if self.dim > 7:
-                ss_other = ss[7:]
+                ss_hand = ss[7]
+            if self.dim > 8:
+                ss_state = np.ones(len(ss[8])) * land_pos[7]
+            if self.dim > 9:
+                ss_other = ss[9:]
                 ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
             s_xyz = ss_xyz.T
@@ -640,6 +669,10 @@ class GPSegmentation(object):
                 ss = np.c_[ss_o, ls]
 
             if self.dim > 7:
+                ss = np.c_[ss, ss_hand]
+            if self.dim > 8:
+                ss = np.c_[ss, ss_state]
+            if self.dim > 9:
                 ss = np.c_[ss, ss_other]
 
         elif cord == self.CORD_LAND3:
@@ -648,7 +681,11 @@ class GPSegmentation(object):
             ss_h = ss[3]
             ss_qxyzw = ss[3:7]
             if self.dim > 7:
-                ss_other = ss[7:]
+                ss_hand = ss[7]
+            if self.dim > 8:
+                ss_state = np.ones(len(ss[8])) * land_pos[7]
+            if self.dim > 9:
+                ss_other = ss[9:]
                 ss_other = ss_other.T
             ss_qxyzw = ss_qxyzw.T
             s_xyz = ss_xyz.T
@@ -681,6 +718,10 @@ class GPSegmentation(object):
                 ss = np.c_[ss_o, ls]
 
             if self.dim > 7:
+                ss = np.c_[ss, ss_hand]
+            if self.dim > 8:
+                ss = np.c_[ss, ss_state]
+            if self.dim > 9:
                 ss = np.c_[ss, ss_other]
         elif cord == self.CORD_MOV:
              ss = np.array(s)
